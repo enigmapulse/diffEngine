@@ -1,0 +1,2 @@
+/home/ferrocene/Nebula/diffEngine/build/CMakeFiles/edit_cache.dir
+/home/ferrocene/Nebula/diffEngine/build/CMakeFiles/rebuild_cache.dir
