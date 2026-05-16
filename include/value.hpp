@@ -28,4 +28,12 @@ namespace diffengine {
             "+"
         );
     }
+
+    inline ValueRef operator*(const ValueRef& a, const ValueRef& b) {
+        return std::make_shared<Value>(
+            a->data * b->data,
+            std::vector<ValueRef>{a, b},
+            "*"
+        );
+    }
 }

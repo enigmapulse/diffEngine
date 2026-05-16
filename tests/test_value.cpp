@@ -24,3 +24,18 @@ TEST(ValueTest, GraphTrackingAddition) {
     EXPECT_EQ(c->prev[0], a); 
     EXPECT_EQ(c->prev[1], b); 
 }
+
+
+TEST(ValueTest, GraphTrackingMultiplication) {
+    auto a = diffengine::make_value(2.0f);
+    auto b = diffengine::make_value(3.0f);
+    
+    auto c = a * b;
+    
+    EXPECT_FLOAT_EQ(c->data, 6.0f);
+    EXPECT_EQ(c->op, "*");
+    
+    ASSERT_EQ(c->prev.size(), 2);
+    EXPECT_EQ(c->prev[0], a);
+    EXPECT_EQ(c->prev[1], b);
+}
