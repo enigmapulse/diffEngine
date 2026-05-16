@@ -3,11 +3,11 @@
 namespace diffengine {
     class Value {
     public:
-        double data;
-        double grad;
+        float data;
+        float grad;
 
         // Constructor
-        explicit Value(double val) : data(val), grad(0.0) {}
+        explicit Value(float val) : data(val), grad(0.0f) {}
 
         // Basic addition (forward pass only for now)
         Value operator+(const Value& other) const {
