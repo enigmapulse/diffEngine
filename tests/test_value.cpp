@@ -39,3 +39,25 @@ TEST(ValueTest, GraphTrackingMultiplication) {
     EXPECT_EQ(c->prev[0], a);
     EXPECT_EQ(c->prev[1], b);
 }
+
+TEST(ValueTest, ReLUPositive) {
+    auto a = diffengine::make_value(5.0f);
+    
+    auto out = diffengine::relu(a); 
+    
+    EXPECT_FLOAT_EQ(out->data, 5.0f);
+    EXPECT_EQ(out->op, "ReLU");
+    ASSERT_EQ(out->prev.size(), 1);
+    EXPECT_EQ(out->prev[0], a);
+}
+
+TEST(ValueTest, ReLUNegative) {
+    auto a = diffengine::make_value(-3.5f);
+    
+    auto out = diffengine::relu(a);
+    
+    EXPECT_FLOAT_EQ(out->data, 0.0f);
+    EXPECT_EQ(out->op, "ReLU");
+    ASSERT_EQ(out->prev.size(), 1);
+    EXPECT_EQ(out->prev[0], a);
+}

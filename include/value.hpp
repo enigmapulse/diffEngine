@@ -36,4 +36,12 @@ namespace diffengine {
             "*"
         );
     }
+
+    inline ValueRef relu(const ValueRef& a) {
+        return std::make_shared<Value>(
+            std::max(a->data, 0.0f),
+            std::vector<ValueRef>{a},
+            "ReLU"
+        );
+    }
 }
