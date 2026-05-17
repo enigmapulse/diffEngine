@@ -1,4 +1,10 @@
 #pragma once
+#include <memory>
+#include <vector>
+#include <string>
+#include <functional>
+#include <algorithm>
+#include <set>
 
 namespace diffengine {
 
@@ -71,5 +77,24 @@ namespace diffengine {
         };
 
         return out;
+    }
+
+    inline std::vector<ValueRef> topo_sort(const ValueRef& root) {
+        std::vector<ValueRef> topo;
+        std::set<Value*> visited;
+
+        std::function<void(const ValueRef&)> build_topo = [&](const ValueRef& v) {
+            if(visited.find(v.get()) == visited.end()) {
+                visited.insert(v.get());
+
+                for(const auto& child : v->prev) {
+                    build_topo(child);
+                }
+                topo.push_back(v);
+            }
+        };
+
+        build_topo(root);
+        return topo;
     }
 }

@@ -75,7 +75,7 @@ TEST(ValueTest, BackwardClosures) {
     d->_backward(); // d = c + a -> c.grad += 1.0, a.grad += 1.0
     c->_backward(); // c = a * b -> a.grad += b.data * c.grad, b.grad += a.data * c.grad
     
-    /* * Expected Gradients:
+    /* Expected Gradients:
      * dd/dd = 1.0
      * dd/dc = 1.0
      * dd/da = (dd/da from addition) + (dd/dc * dc/da) = 1.0 + (1.0 * 3.0) = 4.0
@@ -85,4 +85,28 @@ TEST(ValueTest, BackwardClosures) {
     EXPECT_FLOAT_EQ(c->grad, 1.0f);
     EXPECT_FLOAT_EQ(a->grad, 4.0f);
     EXPECT_FLOAT_EQ(b->grad, 2.0f);
+}
+
+TEST(ValueTest, TopologicalSortDiamondProblem) {
+    auto a = diffengine::make_value(2.0f);
+    auto b = diffengine::make_value(3.0f);
+    
+    // c depends on a and b
+    auto c = a + b; 
+    
+    // d depends on c and a 
+    auto d = c * a; 
+    
+    auto topo = diffengine::topo_sort(d);
+    
+    EXPECT_EQ(topo.back(), d);
+    
+    auto it_a = std::find(topo.begin(), topo.end(), a);
+    auto it_b = std::find(topo.begin(), topo.end(), b);
+    auto it_c = std::find(topo.begin(), topo.end(), c);
+    
+    EXPECT_TRUE(it_a < it_c);
+    EXPECT_TRUE(it_b < it_c); 
+    EXPECT_TRUE(it_c < topo.end() - 1); 
+    EXPECT_TRUE(it_a < topo.end() - 1); 
 }
