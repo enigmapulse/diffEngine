@@ -97,4 +97,14 @@ namespace diffengine {
         build_topo(root);
         return topo;
     }
+
+    inline void backward(const ValueRef& root) {
+        auto topo = topo_sort(root);
+
+        root->grad = 1.0f;
+
+        for(auto it = topo.rbegin(); it != topo.rend(); ++it) {
+            (*it)->_backward();
+        }
+    }
 }

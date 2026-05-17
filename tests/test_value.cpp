@@ -110,3 +110,20 @@ TEST(ValueTest, TopologicalSortDiamondProblem) {
     EXPECT_TRUE(it_c < topo.end() - 1); 
     EXPECT_TRUE(it_a < topo.end() - 1); 
 }
+
+TEST(ValueTest, FullBackwardPass) {
+    auto a = diffengine::make_value(2.0f);
+    auto b = diffengine::make_value(3.0f);
+    auto c = diffengine::make_value(4.0f);
+    
+    // d = (a * b) + c
+    auto d = (a * b) + c;
+    
+    diffengine::backward(d);
+    
+    EXPECT_FLOAT_EQ(d->data, 10.0f);
+    
+    EXPECT_FLOAT_EQ(c->grad, 1.0f);
+    EXPECT_FLOAT_EQ(a->grad, 3.0f);
+    EXPECT_FLOAT_EQ(b->grad, 2.0f);
+}
