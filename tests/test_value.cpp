@@ -42,7 +42,6 @@ TEST(ValueTest, GraphTrackingMultiplication) {
 
 TEST(ValueTest, ReLUPositive) {
     auto a = diffengine::make_value(5.0f);
-    
     auto out = diffengine::relu(a); 
     
     EXPECT_FLOAT_EQ(out->data, 5.0f);
@@ -53,11 +52,37 @@ TEST(ValueTest, ReLUPositive) {
 
 TEST(ValueTest, ReLUNegative) {
     auto a = diffengine::make_value(-3.5f);
-    
     auto out = diffengine::relu(a);
     
     EXPECT_FLOAT_EQ(out->data, 0.0f);
     EXPECT_EQ(out->op, "ReLU");
     ASSERT_EQ(out->prev.size(), 1);
     EXPECT_EQ(out->prev[0], a);
+}
+
+TEST(ValueTest, BackwardClosures) {
+    auto a = diffengine::make_value(2.0f);
+    auto b = diffengine::make_value(3.0f);
+    
+    // c = a * b 
+    auto c = a * b;
+    
+    // d = c + a 
+    auto d = c + a;
+    
+    d->grad = 1.0f; 
+    
+    d->_backward(); // d = c + a -> c.grad += 1.0, a.grad += 1.0
+    c->_backward(); // c = a * b -> a.grad += b.data * c.grad, b.grad += a.data * c.grad
+    
+    /* * Expected Gradients:
+     * dd/dd = 1.0
+     * dd/dc = 1.0
+     * dd/da = (dd/da from addition) + (dd/dc * dc/da) = 1.0 + (1.0 * 3.0) = 4.0
+     * dd/db = dd/dc * dc/db = 1.0 * 2.0 = 2.0
+     */
+    
+    EXPECT_FLOAT_EQ(c->grad, 1.0f);
+    EXPECT_FLOAT_EQ(a->grad, 4.0f);
+    EXPECT_FLOAT_EQ(b->grad, 2.0f);
 }
