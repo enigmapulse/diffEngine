@@ -9,7 +9,15 @@
 namespace diffengine {
 
     class Value;
-    using ValueRef = std::shared_ptr<Value>;
+    struct ValueRef {
+        Value* ptr;
+        ValueRef(Value* p = nullptr) : ptr(p) {}
+        
+        Value* operator->() const { return ptr; }
+        Value& operator*() const { return *ptr; }
+        
+        bool operator==(const ValueRef& other) const { return ptr == other.ptr; }
+    };
 
     class Value {
     public:
@@ -20,62 +28,60 @@ namespace diffengine {
 
         std::function<void()> _backward = [](){};
 
-        // Constructor
+        /* -- Arena allocator -- */
+        static constexpr size_t ARENA_CAPACITY = 1000000;
+        static uint8_t arena_memory[];
+        static size_t arena_offset;
+
+        void* operator new(size_t size) {
+            if (arena_offset * sizeof(Value) + size > ARENA_CAPACITY * sizeof(Value)) {
+                throw std::bad_alloc(); // out of memory
+            }
+            void* ptr = &arena_memory[arena_offset * sizeof(Value)];
+            arena_offset++;
+            return ptr;
+        }
+
+        void operator delete(void* p) {}
+
+        static void reset_arena() {
+            arena_offset = 0;
+        }
+
         explicit Value(float val, std::vector<ValueRef> children = {}, std::string op_type = "") 
             : data(val), grad(0.0f), prev(children), op(op_type) {}
     };
 
+    inline uint8_t Value::arena_memory[ARENA_CAPACITY * sizeof(Value)];
+    inline size_t Value::arena_offset = 0;
+
     inline ValueRef make_value(float val) {
-        return std::make_shared<Value>(val);
+        return new Value(val);
     }
 
     inline ValueRef operator+(const ValueRef& a, const ValueRef& b) {
-        auto out = std::make_shared<Value>(
-            a->data + b->data,
-            std::vector<ValueRef>{a, b},
-            "+"
-        );
-
-        Value* out_ptr = out.get();
-
-        out->_backward = [a, b, out_ptr] () {
-            a -> grad += 1.0f * out_ptr -> grad;
-            b -> grad += 1.0f * out_ptr -> grad;
+        auto out = new Value(a->data + b->data, std::vector<ValueRef>{a, b}, "+");
+        out->_backward = [a, b, out] () {
+            a -> grad += 1.0f * out -> grad;
+            b -> grad += 1.0f * out -> grad;
         };
-
         return out;
     }
 
     inline ValueRef operator*(const ValueRef& a, const ValueRef& b) {
-        auto out =  std::make_shared<Value>(
-            a->data * b->data,
-            std::vector<ValueRef>{a, b},
-            "*"
-        );
-
-        Value* out_ptr = out.get();
-
-        out->_backward = [a, b, out_ptr] () {
-            a -> grad += b -> data * out_ptr -> grad;
-            b -> grad += a -> data * out_ptr -> grad;
+        auto out = new Value(a->data * b->data, std::vector<ValueRef>{a, b}, "*");
+        out->_backward = [a, b, out] () {
+            a->grad += b->data * out->grad;
+            b->grad += a->data * out->grad;
         };
-
         return out;
     }
 
     inline ValueRef relu(const ValueRef& a) {
-        auto out = std::make_shared<Value>(
-            std::max(a->data, 0.0f),
-            std::vector<ValueRef>{a},
-            "ReLU"
-        );
-
-        Value* out_ptr = out.get();
-
-        out->_backward = [a, out_ptr] () {
-            a -> grad += (out_ptr -> data > 0.0f ? 1.0f : 0.0f) * out_ptr -> grad;
+        auto out = new Value(std::max(a->data, 0.0f), std::vector<ValueRef>{a}, "ReLU");
+        out->_backward = [a, out] () {
+            a->grad += (out->data > 0.0f ? 1.0f : 0.0f) * out->grad;
         };
-
         return out;
     }
 
@@ -84,8 +90,8 @@ namespace diffengine {
         std::set<Value*> visited;
 
         std::function<void(const ValueRef&)> build_topo = [&](const ValueRef& v) {
-            if(visited.find(v.get()) == visited.end()) {
-                visited.insert(v.get());
+            if(visited.find(v.ptr)== visited.end()) {
+                visited.insert(v.ptr);
 
                 for(const auto& child : v->prev) {
                     build_topo(child);
@@ -106,5 +112,12 @@ namespace diffengine {
         for(auto it = topo.rbegin(); it != topo.rend(); ++it) {
             (*it)->_backward();
         }
+    }
+
+    inline std::ostream& operator<<(std::ostream& os, const ValueRef& v) {
+        os << "Value(data=" << v->data << ", grad=" << v->grad;
+        if (!v->op.empty()) os << ", op='" << v->op << "'";
+        os << ")";
+        return os;
     }
 }
